@@ -1,5 +1,4 @@
 var firebaseConfig = {
-    //Put your creds here
     apiKey: "AIzaSyAs48uthGM74LqCjpOZXJydOGd0l-oUNYI",
     authDomain: "train-schedule-32a08.firebaseapp.com",
     databaseURL: "https://train-schedule-32a08.firebaseio.com",
@@ -9,60 +8,57 @@ var firebaseConfig = {
     appId: "1:329129705019:web:5e04810580245fdf"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-​
-// Create a variable to reference the database.
+
 var database = firebase.database();
-trainName ="",
-destination = "",
-frequency = 0,
-nextArrival = 0,
-minutessAaway = 0,
-trainData = [];
 
-​
-$('#submitBtn').on("click", function(e) {
-    e.preventDefault();
-    var input = $('input');
+var trainName = "";
+var destination = "";
+var firstTrainTime = "";
+var frequency = "";
+var minutesAway = 0;
 
-    trainName = $("#train-name").val().trim();
-    destination = $("#destination").val().trim();
-    trainTime = $("#train-time").val().trim();
-    frequency = $("#frequency").val().trim();
-​
-    // Code for handling the push
-    database.ref().push({
-        TRAIN_NAME : trainName, 
-        DESTINATION : destination, 
-        TRAIN_TIME : trainTime,
-        FREQUENCY : frequency
-      });
-​
-    input.val('');
-});
-​
-database.ref().on("child_added", function(snapshot) {
-// storing the snapshot.val() in a variable for convenience
+$("#add-train").on("click", function() {
+  event.preventDefault();
 
-console.log(snapshot.val());
+trainName = $("#train-input").val().trim();
+destination = $("#destination-input").val().trim();
+firstTrainTime = moment($("#time-input").val().trim(), "hh:mm").format("X");
+frequency = $("#minutes-input").val().trim();
 
-var data = snapshot.val();
-​​
-var now = moment();
-var date = moment(data.time);
-​
-var overdue = now.diff(date, 'minutes');
-​
-var newToDo = $('<div>')
-newToDo.addClass('toDoItem');
-var descDiv = $('<div>').text(data.description);
-newToDo.append(descDiv);
-var overdueDiv = $('<div>').text(overdue + " minutes overdue");
-newToDo.append(overdueDiv);
-$('#to-do-holder').append(newToDo);
-​
-// Handle the errors
-}, function(errorObject) {
-console.log("Errors handled: " + errorObject.code);
+var newTrain = {
+    trainName: trainName,
+    destination: destination,
+    firstTrainTime: firstTrainTime,
+    frequency: frequency
+};
+
+  database.ref().push(newTrain);
+
+  $("#train-input").val("");
+  $("#destination-input").val("");
+  $("#time-input").val("");
+  $("#minutes-input").val("");
+
+}); 
+
+database.ref().on("child_added", function(childSnapshot, prevChildKey) {
+
+  var trainName = childSnapshot.val().trainName;
+  var destination = childSnapshot.val().destination;
+  var firstTrainTime = childSnapshot.val().firstTrainTime;
+  var frequency = childSnapshot.val().frequency;
+
+  var trainArrival = moment.unix(firstTrainTime).format("hh:mm a");
+
+  var timeConverted = moment(firstTrainTime, "hh:mm").subtract(1, "years");
+  var diffTime = moment().diff(moment(timeConverted), "minutes");
+  var tRemainder = diffTime % frequency;
+  var tMinutesTillTrain = frequency - tRemainder;
+
+  $("#train-table > tbody").append("<tr><td>" + trainName + "</td><td>" + destination + "</td><td>" +
+  frequency + "</td><td>" + trainArrival + "</td><td>" + tMinutesTillTrain + "</td><td>");
+
+}, function(errorObject){
+console.log("The read failed: " + errorObject.code)
 });
